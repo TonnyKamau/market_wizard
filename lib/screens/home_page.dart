@@ -78,6 +78,7 @@ class _HomePageState extends State<HomePage> {
       final response = await generativeModel.generateContent(
           // Assuming 'predict' is the actual method
           content);
+          // write in txt format file
       print(response.text);
 
       setState(() {
