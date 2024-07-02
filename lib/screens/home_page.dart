@@ -75,12 +75,7 @@ class _HomePageState extends State<HomePage> {
         Content.text(
             'Based on the following news article, provide market advice: ${jsonEncode(newsItem)}')
       ];
-      final response = await generativeModel.generateContent(
-          // Assuming 'predict' is the actual method
-          content);
-          // write in txt format file
-      print(response.text);
-
+      final response = await generativeModel.generateContent(content);
       setState(() {
         newsItem['advice'] = response.text ?? 'No advice available';
       });
@@ -89,6 +84,50 @@ class _HomePageState extends State<HomePage> {
         newsItem['advice'] = 'Failed to get market advice: $e';
       });
     }
+  }
+
+  Widget buildAdviceWidget(String advice) {
+    final adviceLines = advice.split('\n');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: adviceLines.map((line) {
+        if (line.startsWith('**') && line.endsWith('**')) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 5.0),
+            child: SelectableText(
+              line.replaceAll('**', ''),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.blueAccent,
+              ),
+            ),
+          );
+        } else if (line.startsWith('* ')) {
+          return Padding(
+            padding: const EdgeInsets.only(left: 10.0, bottom: 5.0),
+            child: SelectableText(
+              line.replaceAll('* ', '• '),
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.black,
+              ),
+            ),
+          );
+        } else {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2.0),
+            child: SelectableText(
+              line,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.black,
+              ),
+            ),
+          );
+        }
+      }).toList(),
+    );
   }
 
   @override
@@ -128,14 +167,6 @@ class _HomePageState extends State<HomePage> {
                                 ),
                                 const SizedBox(height: 5),
                                 Text(
-                                  newsItem['shorterHeadline'] ?? 'No subtitle',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: 5),
-                                Text(
                                   newsItem['description'] ?? 'No description',
                                   style: const TextStyle(
                                     fontSize: 14,
@@ -153,13 +184,8 @@ class _HomePageState extends State<HomePage> {
                                       ),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
-                                    child: Text(
-                                      'Advice: ${newsItem['advice']}',
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.blueAccent,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                    child: buildAdviceWidget(
+                                      newsItem['advice'],
                                     ),
                                   ),
                                 if (newsItem['advice'] == null)
