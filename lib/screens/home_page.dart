@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_generative_ai/google_generative_ai.dart';
@@ -73,11 +74,23 @@ class _HomePageState extends State<HomePage> {
     try {
       final content = [
         Content.text(
-            'Based on the following news article, provide market advice: ${jsonEncode(newsItem)}')
+            'Provide a brief and concise market advice summary based on this news article: ${jsonEncode(newsItem)}. Avoid disclaimers and keep it under 100 words.')
       ];
       final response = await generativeModel.generateContent(content);
+
+      // Process the response to remove any unwanted sections or verbosity
+      String advice = response.text ?? 'No advice available';
+
+      // Simplify further if the advice includes sections headers like "##", "**", or bullet points
+      advice =
+          advice.replaceAll(RegExp(r'##\s*'), ''); // Removes section titles
+      advice =
+          advice.replaceAll(RegExp(r'\*\*\s*'), ''); // Removes bold markers
+      advice = advice.replaceAll(
+          RegExp(r'\* '), '• '); // Replace bullets with simpler format
+
       setState(() {
-        newsItem['advice'] = response.text ?? 'No advice available';
+        newsItem['advice'] = advice;
       });
     } catch (e) {
       setState(() {
@@ -88,45 +101,68 @@ class _HomePageState extends State<HomePage> {
 
   Widget buildAdviceWidget(String advice) {
     final adviceLines = advice.split('\n');
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: adviceLines.map((line) {
-        if (line.startsWith('**') && line.endsWith('**')) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 5.0),
-            child: SelectableText(
-              line.replaceAll('**', ''),
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.blueAccent,
-              ),
-            ),
-          );
-        } else if (line.startsWith('* ')) {
-          return Padding(
-            padding: const EdgeInsets.only(left: 10.0, bottom: 5.0),
-            child: SelectableText(
-              line.replaceAll('* ', '• '),
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.black,
-              ),
-            ),
-          );
-        } else {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 2.0),
-            child: SelectableText(
-              line,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.black,
-              ),
-            ),
-          );
-        }
-      }).toList(),
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: adviceLines.map((line) {
+            if (line.startsWith('**') && line.endsWith('**')) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 5.0),
+                child: SelectableText(
+                  line.replaceAll('**', ''),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blueAccent,
+                  ),
+                ),
+              );
+            } else if (line.startsWith('* ')) {
+              return Padding(
+                padding: const EdgeInsets.only(left: 10.0, bottom: 5.0),
+                child: SelectableText(
+                  line.replaceAll('* ', '• '),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.black,
+                  ),
+                ),
+              );
+            } else {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2.0),
+                child: SelectableText(
+                  line,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.black,
+                  ),
+                ),
+              );
+            }
+          }).toList(),
+        ),
+        Positioned(
+          top: -8,
+          right: -8,
+          child: IconButton(
+            icon: const Icon(Icons.copy, color: Colors.grey),
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: advice));
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Copied to clipboard'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
+          ),
+        ),
+      ],
     );
   }
 

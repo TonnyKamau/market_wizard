@@ -3,7 +3,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
-import 'package:market_wizard/screens/Home_Page.dart';
+
+import 'screens/screens.dart';
+
 void main() async {
   WidgetsFlutterBinding
       .ensureInitialized(); // Ensure the framework is initialized
@@ -26,7 +28,6 @@ void main() async {
   );
 }
 
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -44,4 +45,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
