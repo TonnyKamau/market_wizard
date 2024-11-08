@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -112,6 +113,7 @@ class _HomePageState extends State<HomePage> {
                 padding: const EdgeInsets.symmetric(vertical: 5.0),
                 child: SelectableText(
                   line.replaceAll('**', ''),
+                  textAlign: TextAlign.justify, // Justify alignment
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -124,8 +126,9 @@ class _HomePageState extends State<HomePage> {
                 padding: const EdgeInsets.only(left: 10.0, bottom: 5.0),
                 child: SelectableText(
                   line.replaceAll('* ', '• '),
+                  textAlign: TextAlign.justify, // Justify alignment
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 16,
                     color: Colors.black,
                   ),
                 ),
@@ -135,8 +138,9 @@ class _HomePageState extends State<HomePage> {
                 padding: const EdgeInsets.symmetric(vertical: 2.0),
                 child: SelectableText(
                   line,
+                  textAlign: TextAlign.justify, // Justify alignment
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 16,
                     color: Colors.black,
                   ),
                 ),
@@ -145,19 +149,29 @@ class _HomePageState extends State<HomePage> {
           }).toList(),
         ),
         Positioned(
-          top: -8,
-          right: -8,
+          bottom: -2, // Position at the bottom
+          right: -2, // Align to the right
           child: IconButton(
+            iconSize: 25, // Smaller icon size
             icon: const Icon(Icons.copy, color: Colors.grey),
             onPressed: () async {
               await Clipboard.setData(ClipboardData(text: advice));
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Copied to clipboard'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
+
+              // Wrap in try-catch to handle potential exceptions
+              try {
+                Future.delayed(const Duration(milliseconds: 100), () {
+                  Fluttertoast.showToast(
+                    msg: 'Copied to clipboard',
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 1,
+                    backgroundColor: Colors.grey[700],
+                    textColor: Colors.white,
+                    fontSize: 16.0,
+                  );
+                });
+              } catch (e) {
+                print('Error showing toast: $e');
               }
             },
           ),
@@ -170,7 +184,12 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Market News'),
+        title: const Text(
+          'Market News',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -205,8 +224,7 @@ class _HomePageState extends State<HomePage> {
                                 Text(
                                   newsItem['description'] ?? 'No description',
                                   style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey,
+                                    fontSize: 16,
                                   ),
                                 ),
                                 const SizedBox(height: 10),
