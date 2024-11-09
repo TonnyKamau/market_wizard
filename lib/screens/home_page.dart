@@ -30,9 +30,9 @@ class _HomePageState extends State<HomePage> {
     try {
       final response = await http.get(
         Uri.parse('https://cnbc.p.rapidapi.com/news/v2/list-special-reports'),
-        headers: <String, String>{
+        headers: {
           'x-rapidapi-key': apiKey,
-          'x-rapidapi-host': 'cnbc.p.rapidapi.com'
+          'x-rapidapi-host': 'cnbc.p.rapidapi.com',
         },
       );
 
@@ -51,21 +51,14 @@ class _HomePageState extends State<HomePage> {
           _errorMessage = '';
         });
 
-        // Get market advice for each news item
         for (var newsItem in _newsList) {
           getMarketAdvice(newsItem);
         }
       } else {
-        setState(() {
-          _errorMessage = 'Failed to load news';
-          _isLoading = false;
-        });
+        _setError('Failed to load news');
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'An error occurred: $e';
-        _isLoading = false;
-      });
+      _setError('An error occurred: $e');
     }
   }
 
@@ -76,10 +69,9 @@ class _HomePageState extends State<HomePage> {
     try {
       final content = [
         Content.text(
-            'Provide a brief and concise market advice summary based on this news article: ${jsonEncode(newsItem)}. Avoid disclaimers and keep it under 100 words.')
+            'Provide a brief market advice based on this news article: ${jsonEncode(newsItem)}. Keep it under 100 words.')
       ];
       final response = await generativeModel.generateContent(content);
-
       String advice = response.text ?? 'No advice available';
       advice = advice.replaceAll(RegExp(r'##\s*'), '');
       advice = advice.replaceAll(RegExp(r'\*\*\s*'), '');
@@ -95,55 +87,23 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  void _setError(String message) {
+    setState(() {
+      _errorMessage = message;
+      _isLoading = false;
+    });
+  }
+
   Widget buildAdviceWidget(String advice) {
-    final adviceLines = advice.split('\n');
-    bool isAdviceAvailable = !advice.startsWith('Failed to get market advice');
+    final isAdviceAvailable = !advice.startsWith('Failed to get market advice');
 
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: adviceLines.map((line) {
-            if (line.startsWith('**') && line.endsWith('**')) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 5.0),
-                child: SelectableText(
-                  line.replaceAll('**', ''),
-                  textAlign: TextAlign.justify,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blueAccent,
-                  ),
-                ),
-              );
-            } else if (line.startsWith('* ')) {
-              return Padding(
-                padding: const EdgeInsets.only(left: 10.0, bottom: 5.0),
-                child: SelectableText(
-                  line.replaceAll('* ', '• '),
-                  textAlign: TextAlign.justify,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.black,
-                  ),
-                ),
-              );
-            } else {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2.0),
-                child: SelectableText(
-                  line,
-                  textAlign: TextAlign.justify,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.black,
-                  ),
-                ),
-              );
-            }
-          }).toList(),
+        SelectableText(
+          advice,
+          textAlign: TextAlign.justify,
+          style: const TextStyle(fontSize: 16, color: Colors.black),
         ),
         if (isAdviceAvailable)
           Positioned(
@@ -152,28 +112,22 @@ class _HomePageState extends State<HomePage> {
             child: IconButton(
               iconSize: 25,
               icon: const Icon(Icons.copy, color: Colors.grey),
-              onPressed: () async {
-                await Clipboard.setData(ClipboardData(text: advice));
-
-                try {
-                  Future.delayed(const Duration(milliseconds: 100), () {
-                    Fluttertoast.showToast(
-                      msg: 'Copied to clipboard',
-                      toastLength: Toast.LENGTH_SHORT,
-                      gravity: ToastGravity.BOTTOM,
-                      timeInSecForIosWeb: 1,
-                      backgroundColor: Colors.grey[700],
-                      textColor: Colors.white,
-                      fontSize: 16.0,
-                    );
-                  });
-                } catch (e) {
-                  print('Error showing toast: $e');
-                }
-              },
+              onPressed: () => _copyToClipboard(advice),
             ),
           ),
       ],
+    );
+  }
+
+  void _copyToClipboard(String text) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    Fluttertoast.showToast(
+      msg: 'Copied to clipboard',
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: Colors.grey[700],
+      textColor: Colors.white,
+      fontSize: 16.0,
     );
   }
 
@@ -183,9 +137,7 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text(
           'Market News',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
       body: _isLoading
@@ -205,7 +157,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 )
               : RefreshIndicator(
-                  onRefresh: () => getNews(),
+                  onRefresh: getNews,
                   color: Colors.blueAccent,
                   child: ListView.builder(
                     itemCount: _newsList.length,
@@ -234,9 +186,7 @@ class _HomePageState extends State<HomePage> {
                                 const SizedBox(height: 5),
                                 Text(
                                   newsItem['description'] ?? 'No description',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                  ),
+                                  style: const TextStyle(fontSize: 16),
                                 ),
                                 const SizedBox(height: 10),
                                 if (newsItem['advice'] != null)
@@ -244,14 +194,12 @@ class _HomePageState extends State<HomePage> {
                                     padding: const EdgeInsets.all(10.0),
                                     decoration: BoxDecoration(
                                       color: Colors.blueAccent.withOpacity(0.1),
-                                      border: Border.all(
-                                        color: Colors.blueAccent,
-                                      ),
+                                      border:
+                                          Border.all(color: Colors.blueAccent),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
-                                    child: buildAdviceWidget(
-                                      newsItem['advice'],
-                                    ),
+                                    child:
+                                        buildAdviceWidget(newsItem['advice']),
                                   ),
                                 if (newsItem['advice'] == null)
                                   Lottie.asset(
