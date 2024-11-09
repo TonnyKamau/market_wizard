@@ -5,6 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:lottie/lottie.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -79,16 +80,10 @@ class _HomePageState extends State<HomePage> {
       ];
       final response = await generativeModel.generateContent(content);
 
-      // Process the response to remove any unwanted sections or verbosity
       String advice = response.text ?? 'No advice available';
-
-      // Simplify further if the advice includes sections headers like "##", "**", or bullet points
-      advice =
-          advice.replaceAll(RegExp(r'##\s*'), ''); // Removes section titles
-      advice =
-          advice.replaceAll(RegExp(r'\*\*\s*'), ''); // Removes bold markers
-      advice = advice.replaceAll(
-          RegExp(r'\* '), '• '); // Replace bullets with simpler format
+      advice = advice.replaceAll(RegExp(r'##\s*'), '');
+      advice = advice.replaceAll(RegExp(r'\*\*\s*'), '');
+      advice = advice.replaceAll(RegExp(r'\* '), '• ');
 
       setState(() {
         newsItem['advice'] = advice;
@@ -102,6 +97,8 @@ class _HomePageState extends State<HomePage> {
 
   Widget buildAdviceWidget(String advice) {
     final adviceLines = advice.split('\n');
+    bool isAdviceAvailable = !advice.startsWith('Failed to get market advice');
+
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -113,7 +110,7 @@ class _HomePageState extends State<HomePage> {
                 padding: const EdgeInsets.symmetric(vertical: 5.0),
                 child: SelectableText(
                   line.replaceAll('**', ''),
-                  textAlign: TextAlign.justify, // Justify alignment
+                  textAlign: TextAlign.justify,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -126,7 +123,7 @@ class _HomePageState extends State<HomePage> {
                 padding: const EdgeInsets.only(left: 10.0, bottom: 5.0),
                 child: SelectableText(
                   line.replaceAll('* ', '• '),
-                  textAlign: TextAlign.justify, // Justify alignment
+                  textAlign: TextAlign.justify,
                   style: const TextStyle(
                     fontSize: 16,
                     color: Colors.black,
@@ -138,7 +135,7 @@ class _HomePageState extends State<HomePage> {
                 padding: const EdgeInsets.symmetric(vertical: 2.0),
                 child: SelectableText(
                   line,
-                  textAlign: TextAlign.justify, // Justify alignment
+                  textAlign: TextAlign.justify,
                   style: const TextStyle(
                     fontSize: 16,
                     color: Colors.black,
@@ -148,34 +145,34 @@ class _HomePageState extends State<HomePage> {
             }
           }).toList(),
         ),
-        Positioned(
-          bottom: -2, // Position at the bottom
-          right: -2, // Align to the right
-          child: IconButton(
-            iconSize: 25, // Smaller icon size
-            icon: const Icon(Icons.copy, color: Colors.grey),
-            onPressed: () async {
-              await Clipboard.setData(ClipboardData(text: advice));
+        if (isAdviceAvailable)
+          Positioned(
+            bottom: -6,
+            right: -6,
+            child: IconButton(
+              iconSize: 25,
+              icon: const Icon(Icons.copy, color: Colors.grey),
+              onPressed: () async {
+                await Clipboard.setData(ClipboardData(text: advice));
 
-              // Wrap in try-catch to handle potential exceptions
-              try {
-                Future.delayed(const Duration(milliseconds: 100), () {
-                  Fluttertoast.showToast(
-                    msg: 'Copied to clipboard',
-                    toastLength: Toast.LENGTH_SHORT,
-                    gravity: ToastGravity.BOTTOM,
-                    timeInSecForIosWeb: 1,
-                    backgroundColor: Colors.grey[700],
-                    textColor: Colors.white,
-                    fontSize: 16.0,
-                  );
-                });
-              } catch (e) {
-                print('Error showing toast: $e');
-              }
-            },
+                try {
+                  Future.delayed(const Duration(milliseconds: 100), () {
+                    Fluttertoast.showToast(
+                      msg: 'Copied to clipboard',
+                      toastLength: Toast.LENGTH_SHORT,
+                      gravity: ToastGravity.BOTTOM,
+                      timeInSecForIosWeb: 1,
+                      backgroundColor: Colors.grey[700],
+                      textColor: Colors.white,
+                      fontSize: 16.0,
+                    );
+                  });
+                } catch (e) {
+                  print('Error showing toast: $e');
+                }
+              },
+            ),
           ),
-        ),
       ],
     );
   }
@@ -194,9 +191,22 @@ class _HomePageState extends State<HomePage> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _errorMessage.isNotEmpty
-              ? Center(child: Text(_errorMessage))
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error, color: Colors.red, size: 40),
+                      Text(
+                        _errorMessage,
+                        style: const TextStyle(fontSize: 16, color: Colors.red),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                )
               : RefreshIndicator(
                   onRefresh: () => getNews(),
+                  color: Colors.blueAccent,
                   child: ListView.builder(
                     itemCount: _newsList.length,
                     itemBuilder: (context, index) {
@@ -204,7 +214,7 @@ class _HomePageState extends State<HomePage> {
                       return Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: Card(
-                          elevation: 5,
+                          elevation: 8,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -218,6 +228,7 @@ class _HomePageState extends State<HomePage> {
                                   style: const TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
+                                    height: 1.4,
                                   ),
                                 ),
                                 const SizedBox(height: 5),
@@ -243,7 +254,12 @@ class _HomePageState extends State<HomePage> {
                                     ),
                                   ),
                                 if (newsItem['advice'] == null)
-                                  const CircularProgressIndicator(),
+                                  Lottie.asset(
+                                    'assets/loading.json',
+                                    height: 100,
+                                    width: 100,
+                                    fit: BoxFit.contain,
+                                  ),
                               ],
                             ),
                           ),
